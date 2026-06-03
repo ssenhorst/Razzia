@@ -15,7 +15,7 @@ const Room = () => {
   const { socket, isConnected } = useSocket()
   const { join } = usePlayerStore()
   const [invitation, setInvitation] = useState("")
-  const { pin } = useSearch({ from: "/(auth)/" })
+  const { pin, gameId } = useSearch({ from: "/(auth)/" })
   const hasJoinedRef = useRef(false)
   const { t } = useTranslation()
 
@@ -23,18 +23,29 @@ const Room = () => {
     socket.emit(EVENTS.PLAYER.JOIN, invitation.replace(/\s/gu, ""))
   }
 
-  useEvent(EVENTS.GAME.SUCCESS_ROOM, (gameId) => {
-    join(gameId)
+  useEvent(EVENTS.GAME.SUCCESS_ROOM, (joinedGameId) => {
+    join(joinedGameId)
   })
 
   useEffect(() => {
-    if (!isConnected || !pin || hasJoinedRef.current) {
+    if (!isConnected || hasJoinedRef.current) {
       return
     }
 
-    socket.emit("player:join", pin)
+    if (gameId) {
+      socket.emit(EVENTS.PLAYER.JOIN_GAME_ID, gameId)
+      hasJoinedRef.current = true
+
+      return
+    }
+
+    if (!pin) {
+      return
+    }
+
+    socket.emit(EVENTS.PLAYER.JOIN, pin)
     hasJoinedRef.current = true
-  }, [pin, isConnected, socket])
+  }, [gameId, pin, isConnected, socket])
 
   return (
     <Card>

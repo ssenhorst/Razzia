@@ -26,6 +26,11 @@ const ManagerGamePage = () => {
   const { setQuestionStates } = useQuestionStore()
   const { t } = useTranslation()
 
+  const isLiveResponsesInProgress =
+    status?.name === STATUS.SHOW_RESPONSES
+      ? status.data.finalized === false
+      : false
+
   useEvent(EVENTS.GAME.STATUS, ({ name, data }) => {
     if (name in GAME_STATE_COMPONENTS_MANAGER) {
       setStatus(name, data)
@@ -77,6 +82,12 @@ const ManagerGamePage = () => {
       return
     }
 
+    if (isLiveResponsesInProgress) {
+      socket.emit(EVENTS.MANAGER.ABORT_QUIZ, { gameId })
+
+      return
+    }
+
     if (isKeyOf(MANAGER_SKIP_EVENTS, status.name)) {
       socket.emit(MANAGER_SKIP_EVENTS[status.name], { gameId })
     }
@@ -102,6 +113,7 @@ const ManagerGamePage = () => {
       statusName={status.name}
       onNext={handleSkip}
       onBack={status.name === STATUS.SHOW_ROOM ? handleBack : undefined}
+      nextLabel={isLiveResponsesInProgress ? "common:skip" : undefined}
       manager
     >
       {CurrentComponent && <CurrentComponent data={status.data as never} />}

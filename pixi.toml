@@ -1,0 +1,11 @@
+[workspace]
+authors = ["Sander Senhorst <code@senhorst.eu>"]
+channels = ["conda-forge"]
+name = "Razzia"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+pnpm = ">=10.33.2,<11"

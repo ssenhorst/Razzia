@@ -16,6 +16,7 @@ export const EVENTS = {
     SUCCESS_RECONNECT: "player:successReconnect",
     UPDATE_LEADERBOARD: "player:updateLeaderboard",
     JOIN: "player:join",
+    JOIN_GAME_ID: "player:joinGameId",
     LOGIN: "player:login",
     RECONNECT: "player:reconnect",
     LEAVE: "player:leave",
@@ -63,6 +64,11 @@ export const MEDIA_TYPES = {
   IMAGE: "image",
   VIDEO: "video",
   AUDIO: "audio",
+} as const
+
+export const QUESTION_TYPES = {
+  MULTIPLE_CHOICE: "multiple_choice",
+  WORD_CLOUD: "word_cloud",
 } as const
 
 export const EXAMPLE_QUIZZ = {

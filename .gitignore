@@ -3,4 +3,6 @@
 .env
 .secrets
 release.json
-web2
+web2# pixi environments
+.pixi/*
+!.pixi/config.toml

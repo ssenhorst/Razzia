@@ -1,3 +1,4 @@
+import { QUESTION_TYPES } from "@razzia/common/constants"
 import {
   ANSWERS_COLORS,
   ANSWERS_LABELS,
@@ -10,6 +11,14 @@ import { useTranslation } from "react-i18next"
 const QuestionEditorAnswers = () => {
   const { currentQuestion, currentIndex, updateQuestion } = useQuizzEditor()
   const { t } = useTranslation()
+
+  if (currentQuestion.type === QUESTION_TYPES.WORD_CLOUD) {
+    return (
+      <div className="z-10 rounded-xl bg-white/95 p-4 text-center text-sm font-medium text-gray-600 shadow-sm">
+        {t("quizz:question.wordCloudHint")}
+      </div>
+    )
+  }
 
   const updateAnswer = (index: number, value: string) => {
     const next = [...currentQuestion.answers]

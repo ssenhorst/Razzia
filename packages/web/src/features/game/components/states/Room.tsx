@@ -21,6 +21,9 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
   const { gameId } = useManagerStore()
   const { socket } = useSocket()
   const webUrl = window.location.origin
+  const joinUrl = gameId
+    ? `${webUrl}?gameId=${encodeURIComponent(gameId)}`
+    : `${webUrl}?pin=${inviteCode}`
   const { players } = useManagerStore()
   const [playerList, setPlayerList] = useState<Player[]>(players)
   const [totalPlayers, setTotalPlayers] = useState(0)
@@ -67,7 +70,7 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
             <div>
               <p className="text-2xl font-bold">{t("game:joinInstruction")}</p>
               <p className="max-w-64 text-lg font-extrabold break-all">
-                {webUrl}
+                {joinUrl}
               </p>
             </div>
 
@@ -83,10 +86,7 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
         <AlertDialog.Root open={qrOpen} onOpenChange={setQrOpen}>
           <AlertDialog.Trigger asChild>
             <div className="group relative flex h-40 shrink-0 cursor-pointer rounded-xl bg-white p-2">
-              <QRCodeSVG
-                className="h-auto w-auto"
-                value={`${webUrl}?pin=${inviteCode}`}
-              />
+              <QRCodeSVG className="h-auto w-auto" value={joinUrl} />
               <div className="absolute inset-0 flex items-center justify-center rounded-xl opacity-0 transition-opacity group-hover:opacity-100">
                 <div className="rounded-md bg-black/80 p-2">
                   <Maximize2 className="size-6 text-white" />
@@ -109,7 +109,7 @@ const Room = ({ data: { text, inviteCode } }: Props) => {
               </button>
               <QRCodeSVG
                 className="size-56 md:size-70 lg:size-95"
-                value={`${webUrl}?pin=${inviteCode}`}
+                value={joinUrl}
               />
             </AlertDialog.Content>
           </AlertDialog.Portal>

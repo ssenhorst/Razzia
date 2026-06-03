@@ -1,4 +1,4 @@
-import { MEDIA_TYPES } from "@razzia/common/constants"
+import { MEDIA_TYPES, QUESTION_TYPES } from "@razzia/common/constants"
 import { z } from "zod"
 
 export const questionMediaValidator = z.object({
@@ -8,19 +8,87 @@ export const questionMediaValidator = z.object({
   url: z.url("errors:quizz.invalidMediaUrl"),
 })
 
-const questionValidator = z.object({
-  question: z.string().min(1, "errors:quizz.questionEmpty"),
-  media: questionMediaValidator.optional(),
-  answers: z
-    .array(z.string().min(1, "errors:quizz.answerEmpty"))
-    .min(2, "errors:quizz.tooFewAnswers")
-    .max(4, "errors:quizz.tooManyAnswers"),
-  solutions: z
-    .union([z.number().int().min(0), z.array(z.number().int().min(0)).min(1)])
-    .transform((v) => (Array.isArray(v) ? v : [v])),
-  cooldown: z.number().int().min(3).max(15),
-  time: z.number().int().min(5).max(120),
-})
+const questionValidator = z
+  .object({
+    type: z
+      .enum([QUESTION_TYPES.MULTIPLE_CHOICE, QUESTION_TYPES.WORD_CLOUD])
+      .default(QUESTION_TYPES.MULTIPLE_CHOICE),
+    disableTimers: z.boolean().default(false),
+    question: z.string().min(1, "errors:quizz.questionEmpty"),
+    media: questionMediaValidator.optional(),
+    wordCloud: z
+      .object({
+        allowMultipleAnswers: z.boolean().default(false),
+        showLiveResponses: z.boolean().default(false),
+      })
+      .optional(),
+    answers: z
+      .array(z.string().min(1, "errors:quizz.answerEmpty"))
+      .max(4, "errors:quizz.tooManyAnswers")
+      .default([]),
+    solutions: z
+      .preprocess(
+        (value) => (typeof value === "number" ? [value] : value),
+        z.array(z.number().int().min(0)),
+      )
+      .default([]),
+    cooldown: z.number().int().min(3).max(15),
+    time: z.number().int().min(5).max(120),
+  })
+  .superRefine((question, ctx) => {
+    if (question.type === QUESTION_TYPES.WORD_CLOUD) {
+      return
+    }
+
+    if (question.answers.length < 2) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["answers"],
+        message: "errors:quizz.tooFewAnswers",
+      })
+    }
+
+    if (question.solutions.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["solutions"],
+        message: "errors:quizz.failedToSave",
+      })
+
+      return
+    }
+
+    const hasOutOfRangeSolution = question.solutions.some(
+      (solution) => solution >= question.answers.length,
+    )
+
+    if (hasOutOfRangeSolution) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["solutions"],
+        message: "errors:quizz.failedToSave",
+      })
+    }
+  })
+  .transform((question) => {
+    if (question.type === QUESTION_TYPES.WORD_CLOUD) {
+      return {
+        ...question,
+        wordCloud: {
+          allowMultipleAnswers:
+            question.wordCloud?.allowMultipleAnswers ?? false,
+          showLiveResponses: question.wordCloud?.showLiveResponses ?? false,
+        },
+        answers: [],
+        solutions: [],
+      }
+    }
+
+    return {
+      ...question,
+      wordCloud: undefined,
+    }
+  })
 
 export const quizzValidator = z.object({
   subject: z.string().min(1, "errors:quizz.subjectEmpty"),

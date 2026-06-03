@@ -259,8 +259,11 @@ class Game {
     await this.round.start(socket)
   }
 
-  selectAnswer(socket: Socket, answerId: number) {
-    this.round.selectAnswer(socket, answerId)
+  selectAnswer(
+    socket: Socket,
+    answer: { answerKey?: number; answerText?: string },
+  ) {
+    this.round.selectAnswer(socket, answer)
   }
 
   nextRound(socket: Socket) {

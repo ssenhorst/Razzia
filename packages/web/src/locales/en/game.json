@@ -3,6 +3,7 @@
   "gamePinLabel": "Game PIN:",
   "hud": {
     "answers": "Answers",
+    "submissions": "Submissions",
     "time": "Time"
   },
   "joinInstruction": "Join the game at",
@@ -19,7 +20,14 @@
   "rankSuffix": " place",
   "resultBehind": ", behind ",
   "resultTop": "You finished ",
+  "answerReceived": "Answer received!",
+  "noAnswerReceived": "No answer submitted",
   "startGame": "Start Game",
+  "wordCloudPlaceholder": "Type one short answer",
+  "wordCloudSubmit": "Submit",
+  "wordCloudTitle": "Word Cloud",
+  "liveResponses": "Live responses",
+  "noResponsesYet": "No responses yet",
   "usernamePlaceholder": "Username here",
   "waitingForAnswers": "Waiting for the players to answer",
   "waitingForPlayers": "Waiting for players",

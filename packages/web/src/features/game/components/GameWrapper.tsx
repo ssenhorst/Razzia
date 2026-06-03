@@ -20,6 +20,8 @@ type Props = PropsWithChildren & {
   onNext?: () => void
   onBack?: () => void
   manager?: boolean
+  nextLabel?: string | null
+  disableNext?: boolean
 }
 
 const GameWrapper = ({
@@ -28,13 +30,21 @@ const GameWrapper = ({
   onNext,
   onBack,
   manager,
+  nextLabel,
+  disableNext = false,
 }: Props) => {
   const { isConnected } = useSocket()
   const { player } = usePlayerStore()
   const { questionStates, setQuestionStates } = useQuestionStore()
   const { t } = useTranslation()
   const [isDisabled, setIsDisabled] = useState(false)
-  const next = statusName ? MANAGER_SKIP_BTN[statusName] : null
+  let next = null
+
+  if (nextLabel !== undefined) {
+    next = nextLabel
+  } else if (statusName) {
+    next = MANAGER_SKIP_BTN[statusName]
+  }
 
   useEvent(EVENTS.GAME.UPDATE_QUESTION, ({ current, total }) => {
     setQuestionStates({
@@ -51,9 +61,13 @@ const GameWrapper = ({
 
   useEffect(() => {
     setIsDisabled(false)
-  }, [statusName])
+  }, [statusName, next])
 
   const handleNext = () => {
+    if (disableNext) {
+      return
+    }
+
     setIsDisabled(true)
     onNext?.()
   }
@@ -90,7 +104,8 @@ const GameWrapper = ({
                   className={clsx(
                     "bg-white px-4 text-black hover:bg-gray-200",
                     {
-                      "pointer-events-none": isDisabled,
+                      "pointer-events-none opacity-60":
+                        isDisabled || disableNext,
                     },
                   )}
                   onClick={handleNext}

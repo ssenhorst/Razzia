@@ -1,4 +1,4 @@
-import type { MEDIA_TYPES } from "@razzia/common/constants"
+import type { MEDIA_TYPES, QUESTION_TYPES } from "@razzia/common/constants"
 
 export interface Player {
   id: string
@@ -11,9 +11,14 @@ export interface Player {
 
 export interface Answer {
   playerId: string
-  answerId: number
+  answerId: number | null
+  answerText?: string
   points: number
 }
+
+export type QuestionType =
+  | (typeof QUESTION_TYPES)[keyof typeof QUESTION_TYPES]
+  | undefined
 
 export type QuestionMediaType =
   | (typeof MEDIA_TYPES)[keyof typeof MEDIA_TYPES]
@@ -25,6 +30,12 @@ export interface QuestionMedia {
 }
 
 export interface Question {
+  type?: QuestionType
+  disableTimers?: boolean
+  wordCloud?: {
+    allowMultipleAnswers?: boolean
+    showLiveResponses?: boolean
+  }
   question: string
   media?: QuestionMedia
   answers: string[]
@@ -53,6 +64,7 @@ export interface GameUpdateQuestion {
 export interface PlayerAnswerRecord {
   playerName: string
   answerId: number | null
+  answerText?: string
 }
 
 export type QuestionResult = Question & {

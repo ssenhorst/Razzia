@@ -32,27 +32,37 @@ const ResultModalTable = () => {
             questionResult.solutions.includes(pa.answerId)
           const answerLabel =
             pa.answerId !== null ? ANSWERS_LABELS[pa.answerId % 4] : null
+          const answerText =
+            pa.answerId !== null
+              ? questionResult.answers[pa.answerId]
+              : pa.answerText?.trim()
+
+          let answeredCell = <span className="text-xs text-gray-400">—</span>
+
+          if (pa.answerId !== null && answerLabel) {
+            answeredCell = (
+              <span
+                className={clsx(
+                  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white",
+                  ANSWERS_COLORS[pa.answerId % 4],
+                )}
+              >
+                <span className="font-bold">{answerLabel}</span>
+                <span className="max-w-30 truncate">{answerText}</span>
+              </span>
+            )
+          } else if (answerText) {
+            answeredCell = (
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                <span className="max-w-40 truncate">{answerText}</span>
+              </span>
+            )
+          }
 
           return (
             <tr key={i} className="hover:bg-gray-50">
               <td className="px-5 py-2.5 font-medium">{pa.playerName}</td>
-              <td className="px-4 py-2.5">
-                {pa.answerId !== null && answerLabel ? (
-                  <span
-                    className={clsx(
-                      "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white",
-                      ANSWERS_COLORS[pa.answerId % 4],
-                    )}
-                  >
-                    <span className="font-bold">{answerLabel}</span>
-                    <span className="max-w-30 truncate">
-                      {questionResult.answers[pa.answerId]}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-400">—</span>
-                )}
-              </td>
+              <td className="px-4 py-2.5">{answeredCell}</td>
               <td className="px-4 py-2.5">
                 {isCorrect ? (
                   <span className="flex items-center gap-1 text-green-600">

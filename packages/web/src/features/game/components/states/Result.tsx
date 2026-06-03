@@ -49,7 +49,7 @@ const Result = ({
         {t(rankKey, { rank })}
         {aheadOfMe ? `${t("game:resultBehind")}${aheadOfMe}` : ""}
       </p>
-      {correct && (
+      {correct && points > 0 && (
         <span className="mt-2 rounded-lg bg-black/40 px-4 py-2 text-2xl font-bold text-white drop-shadow-lg">
           +{points}
         </span>

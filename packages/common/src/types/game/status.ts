@@ -1,4 +1,8 @@
-import type { Player, QuestionMedia } from "@razzia/common/types/game"
+import type {
+  Player,
+  QuestionMedia,
+  QuestionType,
+} from "@razzia/common/types/game"
 
 export const STATUS = {
   SHOW_ROOM: "SHOW_ROOM",
@@ -17,13 +21,22 @@ export type Status = (typeof STATUS)[keyof typeof STATUS]
 
 export interface CommonStatusDataMap {
   SHOW_START: { time: number; subject: string }
-  SHOW_PREPARED: { totalAnswers: number; questionNumber: number }
+  SHOW_PREPARED: {
+    totalAnswers: number
+    questionNumber: number
+    questionType?: QuestionType
+  }
   SHOW_QUESTION: {
     question: string
     media?: QuestionMedia
     cooldown: number
+    timersDisabled?: boolean
   }
   SELECT_ANSWER: {
+    questionType?: QuestionType
+    wordCloudAllowMultipleAnswers?: boolean
+    wordCloudShowLiveResponses?: boolean
+    timersDisabled?: boolean
     question: string
     answers: string[]
     media?: QuestionMedia
@@ -45,8 +58,10 @@ export interface CommonStatusDataMap {
 interface ManagerExtraStatus {
   SHOW_ROOM: { text: string; inviteCode?: string }
   SHOW_RESPONSES: {
+    questionType?: QuestionType
+    finalized?: boolean
     question: string
-    responses: Record<number, number>
+    responses: Record<string, number>
     solutions: number[]
     answers: string[]
     media?: QuestionMedia

@@ -1,6 +1,8 @@
-import { EVENTS, MEDIA_TYPES } from "@razzia/common/constants"
+import { EVENTS, MEDIA_TYPES, QUESTION_TYPES } from "@razzia/common/constants"
 import type { QuestionMediaType } from "@razzia/common/types/game"
 import type { CommonStatusDataMap } from "@razzia/common/types/game/status"
+import Button from "@razzia/web/components/Button"
+import Input from "@razzia/web/components/Input"
 import QuestionMedia from "@razzia/web/components/QuestionMedia"
 import AnswerButton from "@razzia/web/features/game/components/AnswerButton"
 import {
@@ -14,7 +16,7 @@ import {
   SFX,
 } from "@razzia/web/features/game/utils/constants"
 import clsx from "clsx"
-import { useEffect, useState } from "react"
+import { type KeyboardEvent, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import useSound from "use-sound"
 
@@ -23,14 +25,26 @@ interface Props {
 }
 
 const Answers = ({
-  data: { question, answers, media, time, totalPlayer },
+  data: {
+    question,
+    answers,
+    media,
+    time,
+    totalPlayer,
+    questionType,
+    wordCloudAllowMultipleAnswers,
+    timersDisabled,
+  },
 }: Props) => {
   const { socket } = useSocket()
   const { player, gameId } = usePlayerStore()
 
   const [cooldown, setCooldown] = useState(time)
   const [totalAnswer, setTotalAnswer] = useState(0)
+  const [wordAnswer, setWordAnswer] = useState("")
   const { t } = useTranslation()
+  const isWordCloud = questionType === QUESTION_TYPES.WORD_CLOUD
+  const isMultiWordCloud = isWordCloud && Boolean(wordCloudAllowMultipleAnswers)
 
   const [sfxPop] = useSound(SFX.ANSWERS.SOUND, {
     volume: 0.1,
@@ -54,6 +68,34 @@ const Answers = ({
       },
     })
     sfxPop()
+  }
+
+  const handleWordCloudSubmit = () => {
+    if (!player || !gameId) {
+      return
+    }
+
+    const trimmed = wordAnswer.trim()
+
+    if (!trimmed) {
+      return
+    }
+
+    socket.emit(EVENTS.PLAYER.SELECTED_ANSWER, {
+      gameId,
+      data: {
+        answerText: trimmed,
+      },
+    })
+
+    setWordAnswer("")
+    sfxPop()
+  }
+
+  const handleWordCloudKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      handleWordCloudSubmit()
+    }
   }
 
   useEffect(() => {
@@ -95,32 +137,54 @@ const Answers = ({
 
       <div>
         <div className="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">
-          <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
-            <span className="translate-y-1 text-sm">{t("game:hud.time")}</span>
-            <span>{cooldown}</span>
-          </div>
+          {!timersDisabled && (
+            <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
+              <span className="translate-y-1 text-sm">
+                {t("game:hud.time")}
+              </span>
+              <span>{cooldown}</span>
+            </div>
+          )}
           <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
             <span className="translate-y-1 text-sm">
-              {t("game:hud.answers")}
+              {t(
+                isMultiWordCloud ? "game:hud.submissions" : "game:hud.answers",
+              )}
             </span>
             <span>
-              {totalAnswer}/{totalPlayer}
+              {isMultiWordCloud ? totalAnswer : `${totalAnswer}/${totalPlayer}`}
             </span>
           </div>
         </div>
 
-        <div className="mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-1 px-2 text-lg font-bold text-white md:text-xl">
-          {answers.map((answer, key) => (
-            <AnswerButton
-              key={key}
-              className={clsx(ANSWERS_COLORS[key])}
-              label={ANSWERS_LABELS[key]}
-              onClick={handleAnswer(key)}
-            >
-              {answer}
-            </AnswerButton>
-          ))}
-        </div>
+        {isWordCloud ? (
+          <div className="mx-auto mb-4 flex w-full max-w-3xl gap-2 px-2">
+            <Input
+              className="flex-1 border border-white/30 bg-white/95 text-center"
+              value={wordAnswer}
+              maxLength={40}
+              placeholder={t("game:wordCloudPlaceholder")}
+              onChange={(event) => setWordAnswer(event.target.value)}
+              onKeyDown={handleWordCloudKeyDown}
+            />
+            <Button className="px-5" onClick={handleWordCloudSubmit}>
+              {t("game:wordCloudSubmit")}
+            </Button>
+          </div>
+        ) : (
+          <div className="mx-auto mb-4 grid w-full max-w-7xl grid-cols-2 gap-1 px-2 text-lg font-bold text-white md:text-xl">
+            {answers.map((answer, key) => (
+              <AnswerButton
+                key={key}
+                className={clsx(ANSWERS_COLORS[key])}
+                label={ANSWERS_LABELS[key]}
+                onClick={handleAnswer(key)}
+              >
+                {answer}
+              </AnswerButton>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

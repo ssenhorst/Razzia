@@ -115,13 +115,17 @@ export interface ClientToServerEvents {
 
   // Player actions
   [EVENTS.PLAYER.JOIN]: (_inviteCode: string) => void
+  [EVENTS.PLAYER.JOIN_GAME_ID]: (_gameId: string) => void
   [EVENTS.PLAYER.LOGIN]: (
     _message: MessageWithoutStatus<{ username: string }>,
   ) => void
   [EVENTS.PLAYER.RECONNECT]: (_message: { gameId: string }) => void
   [EVENTS.PLAYER.LEAVE]: (_message: { gameId: string }) => void
   [EVENTS.PLAYER.SELECTED_ANSWER]: (
-    _message: MessageWithoutStatus<{ answerKey: number }>,
+    _message: MessageWithoutStatus<{
+      answerKey?: number
+      answerText?: string
+    }>,
   ) => void
 
   // Results actions

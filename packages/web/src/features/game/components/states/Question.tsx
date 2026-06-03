@@ -8,7 +8,9 @@ interface Props {
   data: CommonStatusDataMap["SHOW_QUESTION"]
 }
 
-const Question = ({ data: { question, media, cooldown } }: Props) => {
+const Question = ({
+  data: { question, media, cooldown, timersDisabled },
+}: Props) => {
   const [sfxShow] = useSound(SFX.SHOW_SOUND, { volume: 0.5 })
 
   useEffect(() => {
@@ -30,10 +32,12 @@ const Question = ({ data: { question, media, cooldown } }: Props) => {
           />
         )}
       </div>
-      <div
-        className="bg-primary mb-20 h-4 self-start justify-self-end rounded-full"
-        style={{ animation: `progressBar ${cooldown}s linear forwards` }}
-      ></div>
+      {!timersDisabled && (
+        <div
+          className="bg-primary mb-20 h-4 self-start justify-self-end rounded-full"
+          style={{ animation: `progressBar ${cooldown}s linear forwards` }}
+        ></div>
+      )}
     </section>
   )
 }

@@ -1,3 +1,4 @@
+import { QUESTION_TYPES } from "@razzia/common/constants"
 import type { Question, QuizzWithId } from "@razzia/common/types/game"
 import {
   createContext,
@@ -29,6 +30,12 @@ const QuizzEditorContext = createContext<QuizzEditorContextType | null>(null)
 
 const defaultQuestion = (): QuestionWithId => ({
   id: uuid(),
+  type: QUESTION_TYPES.MULTIPLE_CHOICE,
+  disableTimers: false,
+  wordCloud: {
+    allowMultipleAnswers: false,
+    showLiveResponses: false,
+  },
   question: "",
   answers: ["", ""],
   solutions: [0],
@@ -38,6 +45,15 @@ const defaultQuestion = (): QuestionWithId => ({
 
 const toQuestionWithId = (q: Question): QuestionWithId => ({
   ...q,
+  type: q.type ?? QUESTION_TYPES.MULTIPLE_CHOICE,
+  disableTimers: q.disableTimers ?? false,
+  wordCloud:
+    q.type === QUESTION_TYPES.WORD_CLOUD
+      ? {
+          allowMultipleAnswers: q.wordCloud?.allowMultipleAnswers ?? false,
+          showLiveResponses: q.wordCloud?.showLiveResponses ?? false,
+        }
+      : q.wordCloud,
   id: uuid(),
 })
 

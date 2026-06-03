@@ -3,14 +3,16 @@ import type { PropsWithChildren, ReactNode } from "react"
 interface LabelProps {
   icon: ReactNode
   label: string
-  unit?: string
+  unit?: string | null
 }
 
 const Label = ({ icon, label, unit = "sec" }: LabelProps) => (
   <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
     {icon}
     {label}
-    <span className="text-xs font-normal text-gray-400">({unit})</span>
+    {unit ? (
+      <span className="text-xs font-normal text-gray-400">({unit})</span>
+    ) : null}
   </div>
 )
 

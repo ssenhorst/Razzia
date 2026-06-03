@@ -1,5 +1,5 @@
 // oxlint-disable typescript/no-unnecessary-condition
-import { EVENTS, MEDIA_TYPES } from "@razzia/common/constants"
+import { EVENTS, MEDIA_TYPES, QUESTION_TYPES } from "@razzia/common/constants"
 import type {
   Answer,
   GameResult,
@@ -43,6 +43,17 @@ export interface RoundManagerOptions {
   onGameFinished: (_result: GameResult) => void
 }
 
+const getQuestionType = (question: Question) =>
+  question.type ?? QUESTION_TYPES.MULTIPLE_CHOICE
+
+const normalizeWordCloudAnswer = (answer: string) =>
+  answer.trim().replace(/\s+/gu, " ").toLowerCase()
+
+const getWordCloudOptions = (question: Question) => ({
+  allowMultipleAnswers: question.wordCloud?.allowMultipleAnswers ?? false,
+  showLiveResponses: question.wordCloud?.showLiveResponses ?? false,
+})
+
 export class RoundManager {
   private readonly opts: RoundManagerOptions
   private started = false
@@ -52,6 +63,7 @@ export class RoundManager {
   private leaderboard: Player[] = []
   private tempOldLeaderboard: Player[] | null = null
   private questionsHistory: QuestionResult[] = []
+  private manualAdvanceResolver: (() => void) | null = null
 
   constructor(opts: RoundManagerOptions) {
     this.opts = opts
@@ -59,6 +71,74 @@ export class RoundManager {
 
   isStarted(): boolean {
     return this.started
+  }
+
+  private waitForManualAdvance(): Promise<void> {
+    return new Promise((resolve) => {
+      this.manualAdvanceResolver = () => {
+        this.manualAdvanceResolver = null
+        resolve()
+      }
+    })
+  }
+
+  private triggerManualAdvance(): void {
+    if (!this.manualAdvanceResolver) {
+      return
+    }
+
+    this.manualAdvanceResolver()
+  }
+
+  private getAggregatedResponses(question: Question): Record<string, number> {
+    const questionType = getQuestionType(question)
+
+    return this.playersAnswers.reduce(
+      (acc: Record<string, number>, { answerId, answerText }) => {
+        if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+          if (!answerText) {
+            return acc
+          }
+
+          acc[answerText] = (acc[answerText] || 0) + 1
+
+          return acc
+        }
+
+        if (answerId === null) {
+          return acc
+        }
+
+        const key = String(answerId)
+        acc[key] = (acc[key] || 0) + 1
+
+        return acc
+      },
+      {},
+    )
+  }
+
+  private countAnsweredPlayers(question: Question): number {
+    if (getQuestionType(question) !== QUESTION_TYPES.WORD_CLOUD) {
+      return this.playersAnswers.length
+    }
+
+    const answeredPlayers = new Set(
+      this.playersAnswers
+        .filter((answer) => Boolean(answer.answerText))
+        .map((answer) => answer.playerId),
+    )
+
+    return answeredPlayers.size
+  }
+
+  private sendManagerResponses(question: Question, finalized: boolean): void {
+    this.opts.send(this.opts.getManagerId(), STATUS.SHOW_RESPONSES, {
+      ...question,
+      questionType: getQuestionType(question),
+      responses: this.getAggregatedResponses(question),
+      finalized,
+    })
   }
 
   getReconnectInfo() {
@@ -104,6 +184,9 @@ export class RoundManager {
     }
 
     const question = this.opts.quizz.questions[this.currentQuestion]
+    const questionType = getQuestionType(question)
+    const wordCloudOptions = getWordCloudOptions(question)
+    const timersDisabled = question.disableTimers ?? false
 
     this.opts.onNewQuestion()
 
@@ -113,8 +196,12 @@ export class RoundManager {
     })
 
     this.opts.broadcast(STATUS.SHOW_PREPARED, {
-      totalAnswers: question.answers.length,
+      totalAnswers:
+        questionType === QUESTION_TYPES.WORD_CLOUD
+          ? 0
+          : question.answers.length,
       questionNumber: this.currentQuestion + 1,
+      questionType,
     })
 
     await sleep(2)
@@ -130,9 +217,12 @@ export class RoundManager {
       question: question.question,
       media: imageMedia,
       cooldown: question.cooldown,
+      timersDisabled,
     })
 
-    await sleep(question.cooldown)
+    if (!timersDisabled) {
+      await sleep(question.cooldown)
+    }
 
     if (!this.started) {
       return
@@ -141,6 +231,10 @@ export class RoundManager {
     this.startTime = Date.now()
 
     this.opts.broadcast(STATUS.SELECT_ANSWER, {
+      questionType,
+      wordCloudAllowMultipleAnswers: wordCloudOptions.allowMultipleAnswers,
+      wordCloudShowLiveResponses: wordCloudOptions.showLiveResponses,
+      timersDisabled,
       question: question.question,
       answers: question.answers,
       media: question.media,
@@ -148,7 +242,18 @@ export class RoundManager {
       totalPlayer: this.opts.players.count(),
     })
 
-    await this.opts.cooldown.start(question.time)
+    if (
+      questionType === QUESTION_TYPES.WORD_CLOUD &&
+      wordCloudOptions.showLiveResponses
+    ) {
+      this.sendManagerResponses(question, false)
+    }
+
+    if (timersDisabled) {
+      await this.waitForManualAdvance()
+    } else {
+      await this.opts.cooldown.start(question.time)
+    }
 
     if (!this.started) {
       return
@@ -158,6 +263,7 @@ export class RoundManager {
   }
 
   private showResults(question: Question): void {
+    const questionType = getQuestionType(question)
     const currentPlayers = this.opts.players.getAll()
 
     const oldLeaderboard = (() => {
@@ -168,30 +274,50 @@ export class RoundManager {
       return this.leaderboard.map((p) => ({ ...p }))
     })()
 
-    const totalType = this.playersAnswers.reduce(
-      (acc: Record<number, number>, { answerId }) => {
-        acc[answerId] = (acc[answerId] || 0) + 1
-
-        return acc
-      },
-      {},
-    )
-
     const sortedPlayers = currentPlayers
       .map((player) => {
-        const playerAnswer = this.playersAnswers.find(
+        const playerAnswers = this.playersAnswers.filter(
           (a) => a.playerId === player.id,
         )
+        const [playerAnswer] = playerAnswers
 
-        const isCorrect = playerAnswer
-          ? question.solutions.includes(playerAnswer.answerId)
-          : false
+        let hasAnswered = false
 
-        const points =
-          playerAnswer && isCorrect ? Math.round(playerAnswer.points) : 0
+        if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+          hasAnswered = playerAnswers.some((answer) =>
+            Boolean(answer.answerText),
+          )
+        } else if (playerAnswer) {
+          hasAnswered = playerAnswer.answerId !== null
+        }
+
+        let isCorrect = false
+
+        if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+          isCorrect = hasAnswered
+        } else if (playerAnswer && playerAnswer.answerId !== null) {
+          isCorrect = question.solutions.includes(playerAnswer.answerId)
+        }
+
+        let points = 0
+
+        if (
+          questionType !== QUESTION_TYPES.WORD_CLOUD &&
+          playerAnswer &&
+          isCorrect
+        ) {
+          points = Math.round(playerAnswer.points)
+        }
 
         player.points += points
-        player.streak = isCorrect ? player.streak + 1 : 0
+
+        if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+          player.streak = 0
+        } else if (isCorrect) {
+          player.streak += 1
+        } else {
+          player.streak = 0
+        }
 
         return { ...player, lastCorrect: isCorrect, lastPoints: points }
       })
@@ -203,9 +329,19 @@ export class RoundManager {
       const rank = index + 1
       const aheadPlayer = sortedPlayers[index - 1]
 
+      let message = "game:wrong"
+
+      if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+        message = player.lastCorrect
+          ? "game:answerReceived"
+          : "game:noAnswerReceived"
+      } else if (player.lastCorrect) {
+        message = "game:correct"
+      }
+
       this.opts.send(player.id, STATUS.SHOW_RESULT, {
         correct: player.lastCorrect,
-        message: player.lastCorrect ? "game:correct" : "game:wrong",
+        message,
         points: player.lastPoints,
         myPoints: player.points,
         rank,
@@ -213,19 +349,37 @@ export class RoundManager {
       })
     })
 
-    this.opts.send(this.opts.getManagerId(), STATUS.SHOW_RESPONSES, {
-      ...question,
-      responses: totalType,
-    })
+    this.sendManagerResponses(question, true)
 
     this.questionsHistory.push({
       ...question,
-      playerAnswers: currentPlayers.map((player) => ({
-        playerName: player.username,
-        answerId:
-          this.playersAnswers.find((a) => a.playerId === player.id)?.answerId ??
-          null,
-      })),
+      playerAnswers: currentPlayers.map((player) => {
+        const playerAnswers = this.playersAnswers.filter(
+          (a) => a.playerId === player.id,
+        )
+
+        if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+          const answerTexts = playerAnswers
+            .map((answer) => answer.answerText)
+            .filter((answer): answer is string => Boolean(answer))
+          const uniqueTexts = Array.from(new Set(answerTexts))
+
+          return {
+            playerName: player.username,
+            answerId: null,
+            answerText:
+              uniqueTexts.length > 0 ? uniqueTexts.join(", ") : undefined,
+          }
+        }
+
+        const [playerAnswer] = playerAnswers
+
+        return {
+          playerName: player.username,
+          answerId: playerAnswer?.answerId ?? null,
+          answerText: undefined,
+        }
+      }),
     })
 
     this.leaderboard = sortedPlayers
@@ -233,35 +387,106 @@ export class RoundManager {
     this.playersAnswers = []
   }
 
-  selectAnswer(socket: Socket, answerId: number): void {
+  selectAnswer(
+    socket: Socket,
+    answer: { answerKey?: number; answerText?: string },
+  ): void {
     const player = this.opts.players.findById(socket.id)
     const question = this.opts.quizz.questions[this.currentQuestion]
+    const questionType = getQuestionType(question)
+    const wordCloudOptions = getWordCloudOptions(question)
 
     if (!player) {
       return
     }
 
-    if (this.playersAnswers.find((a) => a.playerId === socket.id)) {
-      return
+    if (questionType === QUESTION_TYPES.WORD_CLOUD) {
+      const answerText = answer.answerText
+        ? normalizeWordCloudAnswer(answer.answerText)
+        : undefined
+
+      if (!answerText) {
+        return
+      }
+
+      const playerAnswers = this.playersAnswers.filter(
+        (entry) => entry.playerId === socket.id,
+      )
+
+      if (!wordCloudOptions.allowMultipleAnswers && playerAnswers.length > 0) {
+        return
+      }
+
+      if (
+        wordCloudOptions.allowMultipleAnswers &&
+        playerAnswers.some((entry) => entry.answerText === answerText)
+      ) {
+        return
+      }
+
+      this.playersAnswers.push({
+        playerId: player.id,
+        answerId: null,
+        answerText,
+        points: 0,
+      })
+
+      if (wordCloudOptions.showLiveResponses) {
+        this.sendManagerResponses(question, false)
+      }
+
+      if (!wordCloudOptions.allowMultipleAnswers) {
+        this.opts.send(socket.id, STATUS.WAIT, {
+          text: "game:waitingForAnswers",
+        })
+      }
+    } else {
+      if (this.playersAnswers.find((entry) => entry.playerId === socket.id)) {
+        return
+      }
+
+      const answerId = answer.answerKey
+
+      if (
+        !Number.isInteger(answerId) ||
+        answerId === undefined ||
+        !question.answers[answerId]
+      ) {
+        return
+      }
+
+      this.playersAnswers.push({
+        playerId: player.id,
+        answerId,
+        points: timeToPoint(this.startTime, question.time),
+      })
+
+      this.opts.send(socket.id, STATUS.WAIT, {
+        text: "game:waitingForAnswers",
+      })
     }
 
-    this.playersAnswers.push({
-      playerId: player.id,
-      answerId,
-      points: timeToPoint(this.startTime, question.time),
-    })
-
-    this.opts.send(socket.id, STATUS.WAIT, {
-      text: "game:waitingForAnswers",
-    })
+    const playerAnswerCount =
+      questionType === QUESTION_TYPES.WORD_CLOUD &&
+      wordCloudOptions.allowMultipleAnswers
+        ? this.playersAnswers.length
+        : this.countAnsweredPlayers(question)
 
     socket
       .to(this.opts.gameId)
-      .emit(EVENTS.GAME.PLAYER_ANSWER, this.playersAnswers.length)
+      .emit(EVENTS.GAME.PLAYER_ANSWER, playerAnswerCount)
     this.opts.players.broadcastCount()
 
-    if (this.playersAnswers.length === this.opts.players.count()) {
+    if (
+      questionType === QUESTION_TYPES.WORD_CLOUD &&
+      wordCloudOptions.allowMultipleAnswers
+    ) {
+      return
+    }
+
+    if (this.countAnsweredPlayers(question) === this.opts.players.count()) {
       this.opts.cooldown.abort()
+      this.triggerManualAdvance()
     }
   }
 
@@ -292,6 +517,7 @@ export class RoundManager {
     }
 
     this.opts.cooldown.abort()
+    this.triggerManualAdvance()
   }
 
   showLeaderboard(): void {

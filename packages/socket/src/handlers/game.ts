@@ -96,6 +96,12 @@ export const gameSocketHandlers = ({ io, socket }: SocketContext) => {
     socket.emit(EVENTS.GAME.SUCCESS_ROOM, game.gameId)
   })
 
+  socket.on(EVENTS.PLAYER.JOIN_GAME_ID, (gameId) =>
+    withGame(gameId, socket, (game) => {
+      socket.emit(EVENTS.GAME.SUCCESS_ROOM, game.gameId)
+    }),
+  )
+
   socket.on(EVENTS.PLAYER.LOGIN, ({ gameId, data }) =>
     withGame(gameId, socket, (game) => game.join(socket, data.username)),
   )
@@ -109,9 +115,7 @@ export const gameSocketHandlers = ({ io, socket }: SocketContext) => {
   )
 
   socket.on(EVENTS.PLAYER.SELECTED_ANSWER, ({ gameId, data }) =>
-    withGame(gameId, socket, (game) =>
-      game.selectAnswer(socket, data.answerKey),
-    ),
+    withGame(gameId, socket, (game) => game.selectAnswer(socket, data)),
   )
 
   socket.on(EVENTS.MANAGER.ABORT_QUIZ, ({ gameId }) =>

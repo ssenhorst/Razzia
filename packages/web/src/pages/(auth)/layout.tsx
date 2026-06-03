@@ -8,6 +8,7 @@ import { z } from "zod"
 
 const searchSchema = z.object({
   pin: z.coerce.string().optional(),
+  gameId: z.coerce.string().optional(),
 })
 
 const AuthLayout = () => {

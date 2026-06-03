@@ -7,10 +7,20 @@
   "question": {
     "addMediaHint": "Add an image, video or audio to your question",
     "config": {
+      "enabled": "Enabled",
       "answerTime": "Answer time",
       "answerTimeHint": "Time players have to answer",
       "questionDisplay": "Question display",
       "questionDisplayHint": "Duration before answers appear",
+      "response": "Response",
+      "responseType": "Response type",
+      "responseTypeHint": "Choose how players answer this question",
+      "allowMultipleAnswers": "Allow multiple answers",
+      "allowMultipleAnswersHint": "Players can submit more than one unique answer.",
+      "disableTimers": "Disable timers",
+      "disableTimersHint": "Question display and answer phases won't auto-timeout.",
+      "showLiveResponses": "Show live responses",
+      "showLiveResponsesHint": "Presenter sees the word cloud update while players are answering.",
       "timings": "Timings"
     },
     "deleteQuestion": "Delete question",
@@ -21,7 +31,12 @@
       "video": "Video"
     },
     "mediaUrlPlaceholder": "Enter URL...",
-    "placeholder": "Start typing your question..."
+    "placeholder": "Start typing your question...",
+    "types": {
+      "multipleChoice": "Multiple choice",
+      "wordCloud": "Word cloud"
+    },
+    "wordCloudHint": "Word cloud mode collects one short text answer per player."
   },
   "quizzSaved": "Quizz saved successfully",
   "quizzUpdated": "Quizz updated successfully",

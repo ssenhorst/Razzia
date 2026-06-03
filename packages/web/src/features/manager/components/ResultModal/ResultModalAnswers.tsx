@@ -57,15 +57,42 @@ const ResultModalAnswers = () => {
 
   const noAnswerCount = totalPlayers - answeredCount
 
-  const rows: AnswerRow[] = [
-    ...questionResult.answers.map((label, ai) => ({
+  const wordRows = Object.entries(
+    questionResult.playerAnswers.reduce<Record<string, number>>(
+      (acc, answer) => {
+        const answerText = answer.answerText?.trim()
+
+        if (!answerText) {
+          return acc
+        }
+
+        acc[answerText] = (acc[answerText] || 0) + 1
+
+        return acc
+      },
+      {},
+    ),
+  )
+    .sort(([, countA], [, countB]) => countB - countA)
+    .map(([label, count]) => ({
       label,
-      count: questionResult.playerAnswers.filter((pa) => pa.answerId === ai)
-        .length,
-      isCorrect: questionResult.solutions.includes(ai),
-      color: ANSWERS_COLORS[ai % 4],
-      answerLabel: ANSWERS_LABELS[ai % 4],
-    })),
+      count,
+      isCorrect: false,
+      color: null,
+      answerLabel: null,
+    }))
+
+  const rows: AnswerRow[] = [
+    ...(questionResult.answers.length > 0
+      ? questionResult.answers.map((label, ai) => ({
+          label,
+          count: questionResult.playerAnswers.filter((pa) => pa.answerId === ai)
+            .length,
+          isCorrect: questionResult.solutions.includes(ai),
+          color: ANSWERS_COLORS[ai % 4],
+          answerLabel: ANSWERS_LABELS[ai % 4],
+        }))
+      : wordRows),
     {
       label: t("manager:result.noAnswer"),
       count: noAnswerCount,
