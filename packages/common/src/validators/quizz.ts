@@ -11,10 +11,14 @@ export const questionMediaValidator = z.object({
 const questionValidator = z
   .object({
     type: z
-      .enum([QUESTION_TYPES.MULTIPLE_CHOICE, QUESTION_TYPES.WORD_CLOUD])
+      .enum([QUESTION_TYPES.MULTIPLE_CHOICE, QUESTION_TYPES.WORD_CLOUD, QUESTION_TYPES.NUMERIC])
       .default(QUESTION_TYPES.MULTIPLE_CHOICE),
     disableTimers: z.boolean().default(false),
+    disablePreviewTimer: z.boolean().default(false),
+    disableAnswerTimer: z.boolean().default(false),
+    previewAnswers: z.boolean().default(false),
     question: z.string().min(1, "errors:quizz.questionEmpty"),
+    numericSolution: z.number().nonnegative().optional(),
     media: questionMediaValidator.optional(),
     wordCloud: z
       .object({
@@ -37,6 +41,20 @@ const questionValidator = z
   })
   .superRefine((question, ctx) => {
     if (question.type === QUESTION_TYPES.WORD_CLOUD) {
+      return
+    }
+
+    if (question.type === QUESTION_TYPES.NUMERIC) {
+      if (typeof question.numericSolution !== "number") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["numericSolution"],
+          message: "errors:quizz.failedToSave",
+        })
+
+        return
+      }
+
       return
     }
 
@@ -79,6 +97,14 @@ const questionValidator = z
             question.wordCloud?.allowMultipleAnswers ?? false,
           showLiveResponses: question.wordCloud?.showLiveResponses ?? false,
         },
+        answers: [],
+        solutions: [],
+      }
+    }
+
+    if (question.type === QUESTION_TYPES.NUMERIC) {
+      return {
+        ...question,
         answers: [],
         solutions: [],
       }

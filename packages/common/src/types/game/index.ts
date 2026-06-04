@@ -13,6 +13,7 @@ export interface Answer {
   playerId: string
   answerId: number | null
   answerText?: string
+  numericValue?: number
   points: number
 }
 
@@ -32,6 +33,10 @@ export interface QuestionMedia {
 export interface Question {
   type?: QuestionType
   disableTimers?: boolean
+  disablePreviewTimer?: boolean
+  disableAnswerTimer?: boolean
+  previewAnswers?: boolean
+  numericSolution?: number
   wordCloud?: {
     allowMultipleAnswers?: boolean
     showLiveResponses?: boolean

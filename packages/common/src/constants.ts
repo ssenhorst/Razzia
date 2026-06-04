@@ -37,6 +37,7 @@ export const EVENTS = {
     KICK_PLAYER: "manager:kickPlayer",
     START_GAME: "manager:startGame",
     ABORT_QUIZ: "manager:abortQuiz",
+    SHOW_QUESTION: "manager:showQuestion",
     NEXT_QUESTION: "manager:nextQuestion",
     SHOW_LEADERBOARD: "manager:showLeaderboard",
     GET_CONFIG: "manager:getConfig",
@@ -69,6 +70,7 @@ export const MEDIA_TYPES = {
 export const QUESTION_TYPES = {
   MULTIPLE_CHOICE: "multiple_choice",
   WORD_CLOUD: "word_cloud",
+  NUMERIC: "numeric",
 } as const
 
 export const EXAMPLE_QUIZZ = {
