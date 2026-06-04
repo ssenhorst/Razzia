@@ -1,8 +1,8 @@
 import type {
-  Player,
-  QuestionMedia,
-  QuestionType,
-} from "@razzia/common/types/game"
+    Player,
+    QuestionMedia,
+    QuestionType,
+} from "@razzia/common/types/game";
 
 export const STATUS = {
   SHOW_ROOM: "SHOW_ROOM",
@@ -30,13 +30,15 @@ export interface CommonStatusDataMap {
     question: string
     media?: QuestionMedia
     cooldown: number
-    timersDisabled?: boolean
+    previewTimerDisabled?: boolean
+    previewAnswers?: boolean
+    answers?: string[]
   }
   SELECT_ANSWER: {
     questionType?: QuestionType
     wordCloudAllowMultipleAnswers?: boolean
     wordCloudShowLiveResponses?: boolean
-    timersDisabled?: boolean
+    answerTimerDisabled?: boolean
     question: string
     answers: string[]
     media?: QuestionMedia
@@ -64,6 +66,8 @@ interface ManagerExtraStatus {
     responses: Record<string, number>
     solutions: number[]
     answers: string[]
+    numericResponses?: Array<{ value: number; playerName: string }>
+    numericSolution?: number
     media?: QuestionMedia
   }
   SHOW_LEADERBOARD: { oldLeaderboard: Player[]; leaderboard: Player[] }

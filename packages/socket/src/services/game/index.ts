@@ -2,9 +2,9 @@ import { EVENTS } from "@razzia/common/constants"
 import type { Player, Quizz } from "@razzia/common/types/game"
 import type { Server, Socket } from "@razzia/common/types/game/socket"
 import {
-  STATUS,
-  type Status,
-  type StatusDataMap,
+    STATUS,
+    type Status,
+    type StatusDataMap,
 } from "@razzia/common/types/game/status"
 import { saveResult } from "@razzia/socket/services/config"
 import { CooldownTimer } from "@razzia/socket/services/game/cooldown-timer"
@@ -272,6 +272,10 @@ class Game {
 
   abortRound(socket: Socket) {
     this.round.abortQuestion(socket)
+  }
+
+  showQuestion(socket: Socket) {
+    this.round.showQuestion(socket)
   }
 
   showLeaderboard() {

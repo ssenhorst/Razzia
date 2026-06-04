@@ -122,6 +122,10 @@ export const gameSocketHandlers = ({ io, socket }: SocketContext) => {
     withGame(gameId, socket, (game) => game.abortRound(socket)),
   )
 
+  socket.on(EVENTS.MANAGER.SHOW_QUESTION as any, ({ gameId }: { gameId: string }) =>
+    withGame(gameId, socket, (game) => game.showQuestion(socket)),
+  )
+
   socket.on(EVENTS.MANAGER.NEXT_QUESTION, ({ gameId }) =>
     withGame(gameId, socket, (game) => game.nextRound(socket)),
   )

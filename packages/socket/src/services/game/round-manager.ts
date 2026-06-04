@@ -1,18 +1,18 @@
 // oxlint-disable typescript/no-unnecessary-condition
 import { EVENTS, MEDIA_TYPES, QUESTION_TYPES } from "@razzia/common/constants"
 import type {
-  Answer,
-  GameResult,
-  Player,
-  Question,
-  QuestionResult,
-  Quizz,
+    Answer,
+    GameResult,
+    Player,
+    Question,
+    QuestionResult,
+    Quizz,
 } from "@razzia/common/types/game"
 import type { Server, Socket } from "@razzia/common/types/game/socket"
 import {
-  type Status,
-  STATUS,
-  type StatusDataMap,
+    type Status,
+    STATUS,
+    type StatusDataMap,
 } from "@razzia/common/types/game/status"
 import { CooldownTimer } from "@razzia/socket/services/game/cooldown-timer"
 import { PlayerManager } from "@razzia/socket/services/game/player-manager"
@@ -64,6 +64,7 @@ export class RoundManager {
   private tempOldLeaderboard: Player[] | null = null
   private questionsHistory: QuestionResult[] = []
   private manualAdvanceResolver: (() => void) | null = null
+  private manualShowQuestionResolver: (() => void) | null = null
 
   constructor(opts: RoundManagerOptions) {
     this.opts = opts
@@ -82,12 +83,29 @@ export class RoundManager {
     })
   }
 
+  private waitForManualShowQuestion(): Promise<void> {
+    return new Promise((resolve) => {
+      this.manualShowQuestionResolver = () => {
+        this.manualShowQuestionResolver = null
+        resolve()
+      }
+    })
+  }
+
   private triggerManualAdvance(): void {
     if (!this.manualAdvanceResolver) {
       return
     }
 
     this.manualAdvanceResolver()
+  }
+
+  private triggerManualShowQuestion(): void {
+    if (!this.manualShowQuestionResolver) {
+      return
+    }
+
+    this.manualShowQuestionResolver()
   }
 
   private getAggregatedResponses(question: Question): Record<string, number> {
@@ -133,9 +151,31 @@ export class RoundManager {
   }
 
   private sendManagerResponses(question: Question, finalized: boolean): void {
+    const questionType = getQuestionType(question)
+
+    if (questionType === QUESTION_TYPES.NUMERIC) {
+      const numericResponses = this.playersAnswers
+        .filter((a) => typeof a.numericValue === "number")
+        .map((a) => ({
+          value: a.numericValue as number,
+          playerName: this.opts.players.findById(a.playerId)?.username ?? "Unknown",
+        }))
+
+      this.opts.send(this.opts.getManagerId(), STATUS.SHOW_RESPONSES, {
+        ...question,
+        questionType,
+        responses: {},
+        numericResponses,
+        numericSolution: question.numericSolution,
+        finalized,
+      })
+
+      return
+    }
+
     this.opts.send(this.opts.getManagerId(), STATUS.SHOW_RESPONSES, {
       ...question,
-      questionType: getQuestionType(question),
+      questionType,
       responses: this.getAggregatedResponses(question),
       finalized,
     })
@@ -186,7 +226,11 @@ export class RoundManager {
     const question = this.opts.quizz.questions[this.currentQuestion]
     const questionType = getQuestionType(question)
     const wordCloudOptions = getWordCloudOptions(question)
-    const timersDisabled = question.disableTimers ?? false
+    const previewTimerDisabled =
+      question.disablePreviewTimer ?? question.disableTimers ?? false
+    const previewAnswers = question.previewAnswers ?? false
+    const answerTimerDisabled =
+      question.disableAnswerTimer ?? question.disableTimers ?? false
 
     this.opts.onNewQuestion()
 
@@ -217,10 +261,14 @@ export class RoundManager {
       question: question.question,
       media: imageMedia,
       cooldown: question.cooldown,
-      timersDisabled,
+      previewTimerDisabled: previewTimerDisabled || previewAnswers,
+      previewAnswers,
+      answers: previewAnswers ? question.answers : undefined,
     })
 
-    if (!timersDisabled) {
+    if (previewTimerDisabled || previewAnswers) {
+      await this.waitForManualShowQuestion()
+    } else {
       await sleep(question.cooldown)
     }
 
@@ -234,7 +282,7 @@ export class RoundManager {
       questionType,
       wordCloudAllowMultipleAnswers: wordCloudOptions.allowMultipleAnswers,
       wordCloudShowLiveResponses: wordCloudOptions.showLiveResponses,
-      timersDisabled,
+      answerTimerDisabled,
       question: question.question,
       answers: question.answers,
       media: question.media,
@@ -249,7 +297,7 @@ export class RoundManager {
       this.sendManagerResponses(question, false)
     }
 
-    if (timersDisabled) {
+    if (answerTimerDisabled) {
       await this.waitForManualAdvance()
     } else {
       await this.opts.cooldown.start(question.time)
@@ -265,6 +313,43 @@ export class RoundManager {
   private showResults(question: Question): void {
     const questionType = getQuestionType(question)
     const currentPlayers = this.opts.players.getAll()
+
+    let numericMin = 0
+    let numericMax = 0
+    let numericExists = false
+
+    if (questionType === QUESTION_TYPES.NUMERIC) {
+      const numericResponses = this.playersAnswers
+        .map((a) => a.numericValue)
+        .filter((v): v is number => typeof v === "number")
+
+      if (numericResponses.length > 0) {
+        numericMin = Math.min(...numericResponses)
+        numericMax = Math.max(...numericResponses)
+        numericExists = true
+      }
+    }
+
+    // determine closest numeric responder(s) (for awarding a "correct" screen)
+    let closestPlayerIds: string[] = []
+    if (
+      questionType === QUESTION_TYPES.NUMERIC &&
+      numericExists &&
+      typeof question.numericSolution === "number"
+    ) {
+      const sol = question.numericSolution
+      const distances = this.playersAnswers
+        .map((a) => ({ id: a.playerId, v: a.numericValue }))
+        .filter((p): p is { id: string; v: number } => typeof p.v === "number")
+        .map((p) => ({ id: p.id, dist: Math.abs(p.v - sol) }))
+
+      if (distances.length > 0) {
+        distances.sort((a, b) => a.dist - b.dist)
+        const minDist = distances[0].dist
+        // all players at the minimal distance are considered correct (allow ties)
+        closestPlayerIds = distances.filter((d) => d.dist === minDist).map((d) => d.id)
+      }
+    }
 
     const oldLeaderboard = (() => {
       if (this.leaderboard.length === 0) {
@@ -287,6 +372,8 @@ export class RoundManager {
           hasAnswered = playerAnswers.some((answer) =>
             Boolean(answer.answerText),
           )
+        } else if (questionType === QUESTION_TYPES.NUMERIC) {
+          hasAnswered = Boolean(playerAnswer && typeof playerAnswer.numericValue === "number")
         } else if (playerAnswer) {
           hasAnswered = playerAnswer.answerId !== null
         }
@@ -295,13 +382,31 @@ export class RoundManager {
 
         if (questionType === QUESTION_TYPES.WORD_CLOUD) {
           isCorrect = hasAnswered
+        } else if (questionType === QUESTION_TYPES.NUMERIC) {
+          isCorrect =
+              typeof question.numericSolution === "number" &&
+              playerAnswer &&
+              typeof playerAnswer.numericValue === "number" &&
+              (
+                playerAnswer.numericValue === question.numericSolution ||
+                closestPlayerIds.includes(player.id)
+              )
         } else if (playerAnswer && playerAnswer.answerId !== null) {
           isCorrect = question.solutions.includes(playerAnswer.answerId)
         }
 
         let points = 0
 
-        if (
+        if (questionType === QUESTION_TYPES.NUMERIC && playerAnswer && typeof playerAnswer.numericValue === "number" && typeof question.numericSolution === "number") {
+          const base = Math.round(playerAnswer.points)
+          const min = numericExists ? numericMin : question.numericSolution
+          const max = numericExists ? numericMax : question.numericSolution
+          const maxDiff = Math.max(Math.abs(question.numericSolution - min), Math.abs(question.numericSolution - max), 1)
+          const d = Math.abs(playerAnswer.numericValue - question.numericSolution)
+          const proximity = Math.max(0, 1 - d / maxDiff)
+
+          points = Math.round(base * proximity)
+        } else if (
           questionType !== QUESTION_TYPES.WORD_CLOUD &&
           playerAnswer &&
           isCorrect
@@ -374,6 +479,17 @@ export class RoundManager {
 
         const [playerAnswer] = playerAnswers
 
+        if (questionType === QUESTION_TYPES.NUMERIC) {
+          return {
+            playerName: player.username,
+            answerId: null,
+            answerText:
+              typeof playerAnswer?.numericValue === "number"
+                ? String(playerAnswer?.numericValue)
+                : undefined,
+          }
+        }
+
         return {
           playerName: player.username,
           answerId: playerAnswer?.answerId ?? null,
@@ -440,6 +556,34 @@ export class RoundManager {
           text: "game:waitingForAnswers",
         })
       }
+    } else if (questionType === QUESTION_TYPES.NUMERIC) {
+      if (this.playersAnswers.find((entry) => entry.playerId === socket.id)) {
+        return
+      }
+
+      const raw = answer.answerText
+
+      if (!raw) {
+        return
+      }
+
+      const value = Number(raw)
+
+      if (!Number.isFinite(value) || value < 0) {
+        return
+      }
+
+      // store numeric value and base points (time-based)
+      this.playersAnswers.push({
+        playerId: player.id,
+        answerId: null,
+        numericValue: value,
+        points: timeToPoint(this.startTime, question.time),
+      })
+
+      this.opts.send(socket.id, STATUS.WAIT, {
+        text: "game:waitingForAnswers",
+      })
     } else {
       if (this.playersAnswers.find((entry) => entry.playerId === socket.id)) {
         return
@@ -505,6 +649,18 @@ export class RoundManager {
 
     this.currentQuestion += 1
     void this.newQuestion()
+  }
+
+  showQuestion(socket: Socket): void {
+    if (!this.started) {
+      return
+    }
+
+    if (socket.id !== this.opts.getManagerId()) {
+      return
+    }
+
+    this.triggerManualShowQuestion()
   }
 
   abortQuestion(socket: Socket): void {
