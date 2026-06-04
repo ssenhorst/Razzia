@@ -1,7 +1,7 @@
 import { QUESTION_TYPES } from "@razzia/common/constants"
 import {
-  ANSWERS_COLORS,
-  ANSWERS_LABELS,
+    ANSWERS_COLORS,
+    ANSWERS_LABELS,
 } from "@razzia/web/features/game/utils/constants"
 import { useQuizzEditor } from "@razzia/web/features/quizz/contexts/quizz-editor-context"
 import clsx from "clsx"
@@ -16,6 +16,14 @@ const QuestionEditorAnswers = () => {
     return (
       <div className="z-10 rounded-xl bg-white/95 p-4 text-center text-sm font-medium text-gray-600 shadow-sm">
         {t("quizz:question.wordCloudHint")}
+      </div>
+    )
+  }
+
+  if (currentQuestion.type === QUESTION_TYPES.NUMERIC) {
+    return (
+      <div className="z-10 rounded-xl bg-white/95 p-4 text-center text-sm font-medium text-gray-600 shadow-sm">
+        {t("quizz:question.numericHint")}
       </div>
     )
   }
