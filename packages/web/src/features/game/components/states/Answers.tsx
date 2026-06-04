@@ -6,14 +6,14 @@ import Input from "@razzia/web/components/Input"
 import QuestionMedia from "@razzia/web/components/QuestionMedia"
 import AnswerButton from "@razzia/web/features/game/components/AnswerButton"
 import {
-  useEvent,
-  useSocket,
+    useEvent,
+    useSocket,
 } from "@razzia/web/features/game/contexts/socket-context"
 import { usePlayerStore } from "@razzia/web/features/game/stores/player"
 import {
-  ANSWERS_COLORS,
-  ANSWERS_LABELS,
-  SFX,
+    ANSWERS_COLORS,
+    ANSWERS_LABELS,
+    SFX,
 } from "@razzia/web/features/game/utils/constants"
 import clsx from "clsx"
 import { type KeyboardEvent, useEffect, useState } from "react"
@@ -33,7 +33,7 @@ const Answers = ({
     totalPlayer,
     questionType,
     wordCloudAllowMultipleAnswers,
-    timersDisabled,
+    answerTimerDisabled,
   },
 }: Props) => {
   const { socket } = useSocket()
@@ -44,6 +44,7 @@ const Answers = ({
   const [wordAnswer, setWordAnswer] = useState("")
   const { t } = useTranslation()
   const isWordCloud = questionType === QUESTION_TYPES.WORD_CLOUD
+  const isNumeric = questionType === QUESTION_TYPES.NUMERIC
   const isMultiWordCloud = isWordCloud && Boolean(wordCloudAllowMultipleAnswers)
 
   const [sfxPop] = useSound(SFX.ANSWERS.SOUND, {
@@ -98,6 +99,36 @@ const Answers = ({
     }
   }
 
+  const [numericAnswer, setNumericAnswer] = useState<string>("")
+
+  const handleNumericSubmit = () => {
+    if (!player || !gameId) {
+      return
+    }
+
+    const trimmed = numericAnswer.trim()
+
+    if (!trimmed) {
+      return
+    }
+
+    const value = Number(trimmed)
+
+    if (!Number.isFinite(value) || value < 0) {
+      return
+    }
+
+    socket.emit(EVENTS.PLAYER.SELECTED_ANSWER, {
+      gameId,
+      data: {
+        answerText: String(value),
+      },
+    })
+
+    setNumericAnswer("")
+    sfxPop()
+  }
+
   useEffect(() => {
     const disabledMusicMedia = [
       MEDIA_TYPES.AUDIO,
@@ -137,7 +168,7 @@ const Answers = ({
 
       <div>
         <div className="mx-auto mb-4 flex w-full max-w-7xl justify-between gap-1 px-2 text-lg font-bold text-white md:text-xl">
-          {!timersDisabled && (
+          {!answerTimerDisabled && (
             <div className="flex flex-col items-center rounded-lg bg-black/40 px-4 text-lg font-bold">
               <span className="translate-y-1 text-sm">
                 {t("game:hud.time")}
@@ -168,6 +199,20 @@ const Answers = ({
               onKeyDown={handleWordCloudKeyDown}
             />
             <Button className="px-5" onClick={handleWordCloudSubmit}>
+              {t("game:wordCloudSubmit")}
+            </Button>
+          </div>
+        ) : isNumeric ? (
+          <div className="mx-auto mb-4 flex w-full max-w-3xl gap-2 px-2">
+            <Input
+              type="number"
+              min={0}
+              className="flex-1 border border-white/30 bg-white/95 text-center"
+              value={numericAnswer}
+              placeholder={t("game:numericPlaceholder")}
+              onChange={(event) => setNumericAnswer(event.target.value)}
+            />
+            <Button className="px-5" onClick={handleNumericSubmit}>
               {t("game:wordCloudSubmit")}
             </Button>
           </div>

@@ -1,6 +1,6 @@
 import { MEDIA_TYPES } from "@razzia/common/constants"
 import type { CommonStatusDataMap } from "@razzia/common/types/game/status"
-import { SFX } from "@razzia/web/features/game/utils/constants"
+import { ANSWERS_COLORS, ANSWERS_LABELS, SFX } from "@razzia/web/features/game/utils/constants"
 import { useEffect } from "react"
 import useSound from "use-sound"
 
@@ -9,7 +9,7 @@ interface Props {
 }
 
 const Question = ({
-  data: { question, media, cooldown, timersDisabled },
+  data: { question, media, cooldown, previewTimerDisabled, previewAnswers, answers },
 }: Props) => {
   const [sfxShow] = useSound(SFX.SHOW_SOUND, { volume: 0.5 })
 
@@ -32,11 +32,30 @@ const Question = ({
           />
         )}
       </div>
-      {!timersDisabled && (
-        <div
-          className="bg-primary mb-20 h-4 self-start justify-self-end rounded-full"
-          style={{ animation: `progressBar ${cooldown}s linear forwards` }}
-        ></div>
+      {previewAnswers && answers ? (
+        <div className="anim-show grid w-full max-w-5xl grid-cols-2 gap-4 rounded-2xl bg-gray-700 p-5 text-white md:grid-cols-4">
+          {answers.map((answer, key) => (
+            <div
+              key={key}
+              className={
+                "button shadow-inset flex aspect-square h-full w-full items-center justify-center rounded-2xl px-2 text-center text-sm font-bold " +
+                ANSWERS_COLORS[key]
+              }
+            >
+              <div>
+                <span className="text-2xl md:text-3xl">{ANSWERS_LABELS[key]}</span>
+                <p className="mt-2 text-xs md:text-sm">{answer}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !previewTimerDisabled && (
+          <div
+            className="bg-primary mb-20 h-4 self-start justify-self-end rounded-full"
+            style={{ animation: `progressBar ${cooldown}s linear forwards` }}
+          ></div>
+        )
       )}
     </section>
   )
