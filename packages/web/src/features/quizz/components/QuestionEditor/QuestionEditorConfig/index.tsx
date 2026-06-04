@@ -5,12 +5,12 @@ import ConfigNumberInput from "@razzia/web/features/quizz/components/QuestionEdi
 import ConfigSection from "@razzia/web/features/quizz/components/QuestionEditor/QuestionEditorConfig/ConfigSection"
 import { useQuizzEditor } from "@razzia/web/features/quizz/contexts/quizz-editor-context"
 import {
-  Activity,
-  Clock,
-  MessageSquareText,
-  Repeat,
-  Timer,
-  TimerOff,
+    Activity,
+    Clock,
+    MessageSquareText,
+    Repeat,
+    Timer,
+    TimerOff,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -23,6 +23,17 @@ const QuestionEditorConfig = () => {
   }
 
   const handleQuestionTypeChange = (value: QuestionType) => {
+    if (value === QUESTION_TYPES.NUMERIC) {
+      updateQuestion(currentIndex, {
+        type: QUESTION_TYPES.NUMERIC,
+        answers: [],
+        solutions: [],
+        numericSolution: 0,
+      })
+
+      return
+    }
+
     if (value === QUESTION_TYPES.WORD_CLOUD) {
       updateQuestion(currentIndex, {
         type: QUESTION_TYPES.WORD_CLOUD,
@@ -84,12 +95,32 @@ const QuestionEditorConfig = () => {
             <option value={QUESTION_TYPES.WORD_CLOUD}>
               {t("quizz:question.types.wordCloud")}
             </option>
+              <option value={QUESTION_TYPES.NUMERIC}>
+                {t("quizz:question.types.numeric")}
+              </option>
           </select>
 
           <ConfigField.Description>
             {t("quizz:question.config.responseTypeHint")}
           </ConfigField.Description>
         </ConfigField>
+
+        {currentQuestion.type === QUESTION_TYPES.NUMERIC && (
+          <ConfigField>
+            <ConfigField.Label
+              icon={<Activity className="size-4" />}
+              label={t("quizz:question.config.numericSolution")}
+            />
+            <ConfigNumberInput
+              value={currentQuestion.numericSolution ?? 0}
+              min={0}
+              onChange={handleUpdateQuestion("numericSolution")}
+            />
+            <ConfigField.Description>
+              {t("quizz:question.config.numericSolutionHint")}
+            </ConfigField.Description>
+          </ConfigField>
+        )}
 
         {currentQuestion.type === QUESTION_TYPES.WORD_CLOUD && (
           <>
@@ -150,23 +181,69 @@ const QuestionEditorConfig = () => {
         <ConfigField>
           <ConfigField.Label
             icon={<TimerOff className="size-4" />}
-            label={t("quizz:question.config.disableTimers")}
+            label={t("quizz:question.config.disablePreviewTimer")}
             unit={null}
           />
           <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
             <input
               type="checkbox"
-              checked={currentQuestion.disableTimers ?? false}
+              checked={currentQuestion.disablePreviewTimer ?? false}
               onChange={(event) =>
                 updateQuestion(currentIndex, {
-                  disableTimers: event.target.checked,
+                  disablePreviewTimer: event.target.checked,
                 })
               }
             />
             {t("quizz:question.config.enabled")}
           </label>
           <ConfigField.Description>
-            {t("quizz:question.config.disableTimersHint")}
+            {t("quizz:question.config.disablePreviewTimerHint")}
+          </ConfigField.Description>
+        </ConfigField>
+
+        <ConfigField>
+          <ConfigField.Label
+            icon={<TimerOff className="size-4" />}
+            label={t("quizz:question.config.previewAnswers")}
+            unit={null}
+          />
+          <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={currentQuestion.previewAnswers ?? false}
+              onChange={(event) =>
+                updateQuestion(currentIndex, {
+                  previewAnswers: event.target.checked,
+                })
+              }
+            />
+            {t("quizz:question.config.enabled")}
+          </label>
+          <ConfigField.Description>
+            {t("quizz:question.config.previewAnswersHint")}
+          </ConfigField.Description>
+        </ConfigField>
+
+        <ConfigField>
+          <ConfigField.Label
+            icon={<TimerOff className="size-4" />}
+            label={t("quizz:question.config.disableAnswerTimer")}
+            unit={null}
+          />
+          <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+            <input
+              type="checkbox"
+              checked={currentQuestion.disableAnswerTimer ?? false}
+              onChange={(event) =>
+                updateQuestion(currentIndex, {
+                  disableAnswerTimer: event.target.checked,
+                })
+              }
+            />
+            {t("quizz:question.config.enabled")}
+          </label>
+          <ConfigField.Description>
+            {t("quizz:question.config.disableAnswerTimerHint")}
           </ConfigField.Description>
         </ConfigField>
 

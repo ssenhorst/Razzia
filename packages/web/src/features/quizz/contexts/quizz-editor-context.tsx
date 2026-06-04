@@ -1,10 +1,10 @@
 import { QUESTION_TYPES } from "@razzia/common/constants"
 import type { Question, QuizzWithId } from "@razzia/common/types/game"
 import {
-  createContext,
-  useContext,
-  useState,
-  type PropsWithChildren,
+    createContext,
+    useContext,
+    useState,
+    type PropsWithChildren,
 } from "react"
 import { v7 as uuid } from "uuid"
 
@@ -32,6 +32,9 @@ const defaultQuestion = (): QuestionWithId => ({
   id: uuid(),
   type: QUESTION_TYPES.MULTIPLE_CHOICE,
   disableTimers: false,
+  disablePreviewTimer: false,
+  disableAnswerTimer: false,
+  previewAnswers: false,
   wordCloud: {
     allowMultipleAnswers: false,
     showLiveResponses: false,
@@ -47,6 +50,9 @@ const toQuestionWithId = (q: Question): QuestionWithId => ({
   ...q,
   type: q.type ?? QUESTION_TYPES.MULTIPLE_CHOICE,
   disableTimers: q.disableTimers ?? false,
+  disablePreviewTimer: q.disablePreviewTimer ?? q.disableTimers ?? false,
+  disableAnswerTimer: q.disableAnswerTimer ?? q.disableTimers ?? false,
+  previewAnswers: q.previewAnswers ?? false,
   wordCloud:
     q.type === QUESTION_TYPES.WORD_CLOUD
       ? {
