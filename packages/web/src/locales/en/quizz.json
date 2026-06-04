@@ -19,6 +19,14 @@
       "allowMultipleAnswersHint": "Players can submit more than one unique answer.",
       "disableTimers": "Disable timers",
       "disableTimersHint": "Question display and answer phases won't auto-timeout.",
+      "disablePreviewTimer": "Disable preview timer",
+      "disablePreviewTimerHint": "Question preview will wait for the manager before showing answers.",
+      "previewAnswers": "Preview answers",
+      "previewAnswersHint": "Show possible answers before players can start answering.",
+      "numericSolution": "Correct answer",
+      "numericSolutionHint": "Enter the expected numeric answer players should match.",
+      "disableAnswerTimer": "Disable answer timer",
+      "disableAnswerTimerHint": "Players' answer phase will wait for the manager to proceed.",
       "showLiveResponses": "Show live responses",
       "showLiveResponsesHint": "Presenter sees the word cloud update while players are answering.",
       "timings": "Timings"
@@ -32,9 +40,11 @@
     },
     "mediaUrlPlaceholder": "Enter URL...",
     "placeholder": "Start typing your question...",
+    "numericHint": "This question uses a numeric answer. Set the expected value in the question config.",
     "types": {
       "multipleChoice": "Multiple choice",
-      "wordCloud": "Word cloud"
+      "wordCloud": "Word cloud",
+      "numeric": "Numeric"
     },
     "wordCloudHint": "Word cloud mode collects one short text answer per player."
   },

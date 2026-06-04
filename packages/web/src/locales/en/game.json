@@ -24,6 +24,7 @@
   "noAnswerReceived": "No answer submitted",
   "startGame": "Start Game",
   "wordCloudPlaceholder": "Type one short answer",
+  "numericPlaceholder": "Enter a number",
   "wordCloudSubmit": "Submit",
   "wordCloudTitle": "Word Cloud",
   "liveResponses": "Live responses",

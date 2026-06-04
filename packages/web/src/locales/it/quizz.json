@@ -11,6 +11,14 @@
       "answerTimeHint": "Tempo che i giocatori hanno per rispondere",
       "questionDisplay": "Visualizzazione domanda",
       "questionDisplayHint": "Durata prima che appaiano le risposte",
+      "disablePreviewTimer": "Disattiva timer anteprima",
+      "disablePreviewTimerHint": "L'anteprima della domanda attenderà il manager prima di mostrare le risposte.",
+      "previewAnswers": "Anteprima delle risposte",
+      "previewAnswersHint": "Mostra le risposte possibili prima che i giocatori possano rispondere.",
+      "numericSolution": "Risposta corretta",
+      "numericSolutionHint": "Inserisci il valore numerico atteso che i giocatori devono trovare.",
+      "disableAnswerTimer": "Disattiva timer risposta",
+      "disableAnswerTimerHint": "La fase di risposta attenderà il manager prima di continuare.",
       "timings": "Tempi"
     },
     "deleteQuestion": "Elimina domanda",
@@ -21,7 +29,13 @@
       "video": "Video"
     },
     "mediaUrlPlaceholder": "Inserisci URL...",
-    "placeholder": "Inizia a scrivere la tua domanda..."
+    "placeholder": "Inizia a scrivere la tua domanda...",
+    "numericHint": "Questa domanda richiede una risposta numerica. Imposta il valore atteso nella configurazione.",
+    "types": {
+      "multipleChoice": "Scelta multipla",
+      "wordCloud": "Nuvola di parole",
+      "numeric": "Numerico"
+    }
   },
   "quizzSaved": "Quiz salvato con successo",
   "quizzUpdated": "Quiz aggiornato con successo",
