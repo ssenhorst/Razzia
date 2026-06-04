@@ -2,16 +2,16 @@ import { EVENTS } from "@razzia/common/constants"
 import { STATUS } from "@razzia/common/types/game/status"
 import GameWrapper from "@razzia/web/features/game/components/GameWrapper"
 import {
-  socketClient,
-  useEvent,
-  useSocket,
+    socketClient,
+    useEvent,
+    useSocket,
 } from "@razzia/web/features/game/contexts/socket-context"
 import { useManagerStore } from "@razzia/web/features/game/stores/manager"
 import { useQuestionStore } from "@razzia/web/features/game/stores/question"
 import {
-  GAME_STATE_COMPONENTS_MANAGER,
-  MANAGER_SKIP_EVENTS,
-  isKeyOf,
+    GAME_STATE_COMPONENTS_MANAGER,
+    MANAGER_SKIP_EVENTS,
+    isKeyOf,
 } from "@razzia/web/features/game/utils/constants"
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router"
 import toast from "react-hot-toast"
@@ -113,7 +113,14 @@ const ManagerGamePage = () => {
       statusName={status.name}
       onNext={handleSkip}
       onBack={status.name === STATUS.SHOW_ROOM ? handleBack : undefined}
-      nextLabel={isLiveResponsesInProgress ? "common:skip" : undefined}
+      nextLabel={
+        status?.name === STATUS.SHOW_QUESTION &&
+        (status.data?.previewTimerDisabled || status.data?.previewAnswers)
+          ? "common:next"
+          : isLiveResponsesInProgress
+          ? "common:skip"
+          : undefined
+      }
       manager
     >
       {CurrentComponent && <CurrentComponent data={status.data as never} />}
